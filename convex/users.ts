@@ -1,4 +1,3 @@
-// FILE: /convex/users.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
@@ -8,49 +7,101 @@ import { v } from "convex/values";
 
 export const createUserProfile = mutation({
   args: {
-    userId: v.string(),
-    role: v.union(v.literal("innovator"), v.literal("investor"), v.literal("institution"), v.literal("admin")),
+    clerkId: v.string(), // Clerk Auth ID
+    role: v.union(
+      v.literal("innovator"),
+      v.literal("investor"),
+      v.literal("grantmaker"),
+      v.literal("admin"),
+      v.literal("public")
+    ),
     fullName: v.string(),
-    email: v.optional(v.string()),
-    phone: v.optional(v.string()),
+    email: v.string(),
+    avatarUrl: v.optional(v.string()),
+    country: v.optional(v.string()),
+    bio: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, role, fullName, email, phone }) => {
-    return await ctx.db.insert("userProfiles", {
-      userId,
+  handler: async (
+    ctx,
+    { clerkId, role, fullName, email, avatarUrl, country, bio }
+  ) => {
+    const existing = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (existing) return existing;
+
+    const newUser = await ctx.db.insert("userProfiles", {
+      clerkId,
+      fullName,
+      email,
       role,
-      personalInfo: { fullName, email, phone },
-      verified: false,
-      aiCredits: 0,
-      balance: 0,
+      avatarUrl: avatarUrl ?? undefined,
+      country: country ?? undefined,
+      bio: bio ?? undefined,
       createdAt: Date.now(),
     });
+
+    return newUser;
   },
 });
 
+/**
+ * Get user profile by Clerk ID
+ */
 export const getUserProfile = query({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
-    return await ctx.db.get("userProfiles", userId);
+  args: { clerkId: v.string() },
+  handler: async (ctx, { clerkId }) => {
+    return await ctx.db
+      .query("userProfiles")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
   },
 });
 
+/**
+ * Update user profile (partial)
+ */
 export const updateUserProfile = mutation({
   args: {
-    userId: v.string(),
-    personalInfo: v.optional(
-      v.object({
-        fullName: v.optional(v.string()),
-        email: v.optional(v.string()),
-        phone: v.optional(v.string()),
-      })
+    clerkId: v.string(),
+    fullName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    role: v.optional(
+      v.union(
+        v.literal("innovator"),
+        v.literal("investor"),
+        v.literal("grantmaker"),
+        v.literal("admin"),
+        v.literal("public")
+      )
     ),
-    role: v.optional(v.union(v.literal("innovator"), v.literal("investor"), v.literal("institution"), v.literal("admin"))),
+    avatarUrl: v.optional(v.string()),
+    country: v.optional(v.string()),
+    bio: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, personalInfo, role }) => {
-    const updateData: any = {};
-    if (personalInfo) updateData.personalInfo = personalInfo;
-    if (role) updateData.role = role;
+  handler: async (
+    ctx,
+    { clerkId, fullName, email, role, avatarUrl, country, bio }
+  ) => {
+    const user = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
 
-    return await ctx.db.update("userProfiles", userId, updateData);
+    if (!user) throw new Error("User not found");
+
+    const updateData: Record<string, unknown> = {};
+    if (fullName) updateData.fullName = fullName;
+    if (email) updateData.email = email;
+    if (role) updateData.role = role;
+    if (avatarUrl) updateData.avatarUrl = avatarUrl;
+    if (country) updateData.country = country;
+    if (bio) updateData.bio = bio;
+
+    await ctx.db.patch(user._id, updateData);
+
+    return { success: true, updated: updateData };
   },
 });

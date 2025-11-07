@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as campaigns from "../campaigns.js";
+import type * as investments from "../investments.js";
 import type * as users from "../users.js";
 
 import type {
@@ -25,6 +27,8 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  campaigns: typeof campaigns;
+  investments: typeof investments;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

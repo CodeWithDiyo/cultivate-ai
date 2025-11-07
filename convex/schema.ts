@@ -1,9 +1,7 @@
-// FILE: convex/schema.ts
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-
   /**
    * ===========================
    * USERS
@@ -24,7 +22,8 @@ export default defineSchema({
     country: v.optional(v.string()),
     bio: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_clerkId", ["clerkId"])
+  })
+    .index("by_clerkId", ["clerkId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
@@ -69,10 +68,13 @@ export default defineSchema({
     investorId: v.id("userProfiles"),
     affiliateId: v.optional(v.id("userProfiles")),
     amount: v.number(),
+    remaining: v.number(),
     status: v.union(
       v.literal("pending"),
       v.literal("success"),
-      v.literal("failed")
+      v.literal("failed"),
+      v.literal("funded"),
+      v.literal("settled")
     ),
     createdAt: v.number(),
   })
@@ -120,7 +122,8 @@ export default defineSchema({
     description: v.string(),
     relatedId: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_userId", ["userId"])
+  })
+    .index("by_userId", ["userId"])
     .index("by_type", ["type"]),
 
   /**
@@ -219,5 +222,4 @@ export default defineSchema({
     score: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_campaignId", ["campaignId"]),
-
 });
