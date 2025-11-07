@@ -88,7 +88,7 @@ export default defineSchema({
    * ===========================
    */
   payments: defineTable({
-    bidId: v.id("campaignBids"),
+     bidId: v.optional(v.id("campaignBids")), // ✅ now optional
     txRef: v.string(),
     status: v.union(
       v.literal("pending"),
