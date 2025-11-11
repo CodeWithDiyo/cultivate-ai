@@ -1,9 +1,10 @@
+// FILE: /convex/notifications.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
- * Germinate Notification System (real-time)
- * ----------------------------------------
+ * 🌱 Germinate Notification System (real-time)
+ * --------------------------------------------
  * Handles all system, campaign, transaction, and AI-related notifications.
  * Integrates with AgentKit for intelligent alert routing and message generation.
  */
@@ -104,45 +105,67 @@ export const prioritizeNotifications = mutation({
     if (notifications.length === 0)
       return { message: "No notifications found", prioritized: [] };
 
-    // Adjusted to match schema: prioritize AI-based recommendation type
+    // AI-based mock prioritization logic
     const prioritized = notifications
       .sort((a, b) => {
-        const priorityA = (a.read ? 0 : 2) + (a.type === "ai_recommendation" ? 2 : 0);
-        const priorityB = (b.read ? 0 : 2) + (b.type === "ai_recommendation" ? 2 : 0);
+        const priorityA =
+          (a.read ? 0 : 2) + (a.type === "ai_recommendation" ? 2 : 0);
+        const priorityB =
+          (b.read ? 0 : 2) + (b.type === "ai_recommendation" ? 2 : 0);
         return priorityB - priorityA || b.createdAt - a.createdAt;
       })
       .slice(0, 10);
 
     return { message: "AI-prioritized top notifications", prioritized };
   },
-
-  await ctx.db.notifications.insert({
-  userId: bid.investorId,
-  message: `Your investment in ${campaign.title} has been credited with profit.`,
-  type: "commission",
-  read: false,
-  createdAt: Date.now(),
 });
 
-if (bid.affiliateId && campaign.affiliateRewardAmount) {
-  await ctx.db.notifications.insert({
-    userId: bid.affiliateId,
-    message: `You earned a reward for referring an investor to ${campaign.title}.`,
-    type: "commission",
-    read: false,
-    createdAt: Date.now(),
-  });
-}
+/**
+ * ✅ Helper: System-triggered notifications
+ * -----------------------------------------
+ * These are reusable inserts from business logic (e.g. after payouts, investments, AI events)
+ */
+export const triggerSystemNotifications = mutation({
+  args: {
+    investorId: v.id("userProfiles"),
+    affiliateId: v.optional(v.id("userProfiles")),
+    campaignTitle: v.string(),
+    recommendedIds: v.optional(v.array(v.id("userProfiles"))),
+  },
+  handler: async (ctx, { investorId, affiliateId, campaignTitle, recommendedIds }) => {
+    // Investor profit notification
+    await ctx.db.insert("notifications", {
+      userId: investorId,
+      message: `Your investment in ${campaignTitle} has been credited with profit.`,
+      type: "commission",
+      read: false,
+      createdAt: Date.now(),
+    });
 
-for (const recommendedId of recommendedIds) {
-  await ctx.db.notifications.insert({
-    userId: recommendedId, // assuming recommended campaign owner / user
-    message: `AI recommends your campaign for high-impact climate action.`,
-    type: "ai_recommendation",
-    read: false,
-    createdAt: Date.now(),
-  });
-}
+    // Affiliate reward notification
+    if (affiliateId) {
+      await ctx.db.insert("notifications", {
+        userId: affiliateId,
+        message: `You earned a reward for referring an investor to ${campaignTitle}.`,
+        type: "commission",
+        read: false,
+        createdAt: Date.now(),
+      });
+    }
 
+    // AI recommendation notifications
+    if (recommendedIds && recommendedIds.length > 0) {
+      for (const recommendedId of recommendedIds) {
+        await ctx.db.insert("notifications", {
+          userId: recommendedId,
+          message: `AI recommends your campaign for high-impact climate action.`,
+          type: "ai_recommendation",
+          read: false,
+          createdAt: Date.now(),
+        });
+      }
+    }
+
+    return { success: true };
+  },
 });
-
