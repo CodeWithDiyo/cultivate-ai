@@ -54,3 +54,49 @@ export const evaluateSolution = query({
     });
   },
 });
+
+// Cache AI recommendations for a campaign
+export const generateAndCacheRecommendations = mutation({
+  args: {
+    campaignId: v.id("economicCampaigns"),
+  },
+  handler: async ({ campaignId }, ctx) => {
+    const campaigns = await ctx.db.economicCampaigns.getAll();
+    if (!campaigns) return [];
+
+    const campaignList = campaigns.map(c => ({ id: c._id, title: c.title, sector: c.sector }));
+
+    const prompt = `
+      You are a climate change AI advisor.
+      Given the following campaigns, recommend the top 5 campaigns for campaign ID ${campaignId}:
+      ${JSON.stringify(campaignList)}
+      Return an array of campaign IDs only.
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-5-mini",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = response.choices[0]?.message?.content ?? "[]";
+    const recommendedIds = JSON.parse(text);
+
+    // Cache in Convex
+    await ctx.db.aiRecommendations.insert({
+      campaignId,
+      recommendedCampaignIds: recommendedIds,
+      createdAt: Date.now(),
+    });
+
+    return recommendedIds;
+  },
+});
+
+// Query to get cached recommendations
+export const getRecommendations = query({
+  args: { campaignId: v.id("economicCampaigns") },
+  handler: async ({ campaignId }, ctx) => {
+    const cached = await ctx.db.aiRecommendations.filter(r => r.campaignId === campaignId).first();
+    return cached?.recommendedCampaignIds ?? [];
+  },
+});

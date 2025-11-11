@@ -115,4 +115,34 @@ export const prioritizeNotifications = mutation({
 
     return { message: "AI-prioritized top notifications", prioritized };
   },
+
+  await ctx.db.notifications.insert({
+  userId: bid.investorId,
+  message: `Your investment in ${campaign.title} has been credited with profit.`,
+  type: "commission",
+  read: false,
+  createdAt: Date.now(),
 });
+
+if (bid.affiliateId && campaign.affiliateRewardAmount) {
+  await ctx.db.notifications.insert({
+    userId: bid.affiliateId,
+    message: `You earned a reward for referring an investor to ${campaign.title}.`,
+    type: "commission",
+    read: false,
+    createdAt: Date.now(),
+  });
+}
+
+for (const recommendedId of recommendedIds) {
+  await ctx.db.notifications.insert({
+    userId: recommendedId, // assuming recommended campaign owner / user
+    message: `AI recommends your campaign for high-impact climate action.`,
+    type: "ai_recommendation",
+    read: false,
+    createdAt: Date.now(),
+  });
+}
+
+});
+
