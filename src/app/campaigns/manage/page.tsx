@@ -5,7 +5,7 @@ import React from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
-import CreateCampaignForm from "@/components/campaigns/CreateCampaignForm";
+import CreateCampaignForm from "@/src/components/campaigns/CreateCampaignForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
