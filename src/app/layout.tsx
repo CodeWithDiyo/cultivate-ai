@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { Toaster } from "@/components/ui/toaster";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/src/components/ConvexClientProvider";
 
@@ -21,13 +20,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <html lang="en" suppressHydrationWarning>
         <body
           className={cn(
-            "min-h-screen bg-gradient-to-b from-green-50 to-white text-gray-900 antialiased",
+            "min-h-screen bg-linear-to-b from-green-50 to-white text-gray-900 antialiased",
             inter.className
           )}
         >
           <ConvexClientProvider>
             <main className="flex flex-col min-h-screen">{children}</main>
-            <Toaster />
           </ConvexClientProvider>
         </body>
       </html>

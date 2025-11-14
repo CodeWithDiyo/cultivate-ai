@@ -1,22 +1,15 @@
-// FILE: /convex/ai.ts
+// /convex/ai.ts
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { runAgentTask } from "../lib/agentkit"; // ✅ fixed relative import
-import OpenAI from "openai"; // ✅ properly import OpenAI SDK (if used)
+import { runAgentTask } from "../lib/agentkit";
+import OpenAI from "openai";
 
-// ✅ Initialize OpenAI safely
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * 🤖 AgentKit + OpenAI AI Integration for Cultivate AI
- * ----------------------------------------------------
- * Handles intelligent recommendations, evaluations, and cache of AI insights.
- */
-
 /* --------------------------------------------------
-   1️⃣ Recommend campaigns with high climate potential
+   1️⃣ Recommend campaigns
 -------------------------------------------------- */
 export const recommendCampaigns = query({
   args: { userId: v.string() },
@@ -30,10 +23,13 @@ export const recommendCampaigns = query({
 });
 
 /* --------------------------------------------------
-   2️⃣ Generate climate solution plan for a campaign
+   2️⃣ Generate climate plan
 -------------------------------------------------- */
 export const generateCampaignSolutionPlan = mutation({
-  args: { campaignId: v.id("economicCampaigns"), userId: v.string() },
+  args: {
+    campaignId: v.id("economicCampaigns"),
+    userId: v.string(),
+  },
   handler: async (_ctx, { campaignId, userId }) => {
     return await runAgentTask({
       userId,
@@ -44,10 +40,13 @@ export const generateCampaignSolutionPlan = mutation({
 });
 
 /* --------------------------------------------------
-   3️⃣ Recommend innovators for grants or loans
+   3️⃣ Recommend innovators
 -------------------------------------------------- */
 export const recommendInnovatorsForGrant = query({
-  args: { grantId: v.id("economicCampaigns"), userId: v.string() },
+  args: {
+    grantId: v.id("economicCampaigns"),
+    userId: v.string(),
+  },
   handler: async (_ctx, { grantId, userId }) => {
     return await runAgentTask({
       userId,
@@ -58,10 +57,13 @@ export const recommendInnovatorsForGrant = query({
 });
 
 /* --------------------------------------------------
-   4️⃣ Evaluate an innovator’s submitted solution
+   4️⃣ Evaluate solution
 -------------------------------------------------- */
 export const evaluateSolution = query({
-  args: { solutionId: v.id("solutions"), userId: v.string() },
+  args: {
+    solutionId: v.id("solutions"), 
+    userId: v.string(),
+  },
   handler: async (_ctx, { solutionId, userId }) => {
     return await runAgentTask({
       userId,
@@ -72,56 +74,46 @@ export const evaluateSolution = query({
 });
 
 /* --------------------------------------------------
-   5️⃣ Generate + cache AI campaign recommendations
+   5️⃣ Generate + cache recommendations
 -------------------------------------------------- */
 export const generateAndCacheRecommendations = mutation({
   args: { campaignId: v.id("economicCampaigns") },
   handler: async (ctx, { campaignId }) => {
-    // ✅ fetch all campaigns
     const campaigns = await ctx.db.query("economicCampaigns").collect();
-    if (!campaigns || campaigns.length === 0) return [];
-
-    const campaignList = campaigns.map((c) => ({
-      id: c._id,
-      title: c.title,
-      sector: c.sector,
-    }));
+    if (!campaigns.length) return [];
 
     const prompt = `
       You are a climate innovation AI advisor.
-      Given the following campaigns, recommend the top 5 most impactful campaigns
-      related to campaign ID ${campaignId}.
-      Campaign list: ${JSON.stringify(campaignList)}
-      Return only an array of campaign IDs (JSON).
+      Given these campaigns, recommend the top 5 related to ${campaignId}.
+      Return ONLY JSON: ["id1","id2","id3"].
     `;
 
-    // ✅ OpenAI call
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
     });
 
     const text = response.choices?.[0]?.message?.content ?? "[]";
-    let recommendedIds: string[] = [];
+
+    let recommended: string[] = [];
     try {
-      recommendedIds = JSON.parse(text);
+      recommended = JSON.parse(text);
     } catch {
-      recommendedIds = [];
+      recommended = [];
     }
 
-    // ✅ cache results in Convex
     await ctx.db.insert("aiRecommendations", {
       campaignId,
-      recommendedCampaignIds: recommendedIds,
+      recommendedCampaignIds: recommended,
       createdAt: Date.now(),
     });
 
-    return recommendedIds;
+    return recommended;
   },
 });
 
 /* --------------------------------------------------
-   6️⃣ Get cached AI recommendations
+   6️⃣ Get cached recommendations
 -------------------------------------------------- */
 export const getRecommendations = query({
   args: { campaignId: v.id("economicCampaigns") },

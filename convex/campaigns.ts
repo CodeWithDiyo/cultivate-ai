@@ -2,12 +2,11 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
- * Campaign CRUD + real-time queries
+ * Create campaign
  */
-
 export const createCampaign = mutation({
   args: {
-    userId: v.id("userProfiles"), // match schema
+    userId: v.id("userProfiles"),
     title: v.string(),
     description: v.string(),
     sector: v.string(),
@@ -18,9 +17,18 @@ export const createCampaign = mutation({
   },
   handler: async (
     ctx,
-    { userId, title, description, sector, location, fundingGoal, minInvestment, thumbnailUrl }
+    {
+      userId,
+      title,
+      description,
+      sector,
+      location,
+      fundingGoal,
+      minInvestment,
+      thumbnailUrl,
+    }
   ) => {
-    const newCampaignId = await ctx.db.insert("economicCampaigns", {
+    return await ctx.db.insert("economicCampaigns", {
       userId,
       title,
       description,
@@ -29,15 +37,54 @@ export const createCampaign = mutation({
       fundingGoal,
       minInvestment,
       raisedAmount: 0,
-      status: "pending", // initial state until approved
+      status: "pending",
       aiScore: undefined,
       aiSummary: undefined,
       thumbnailUrl: thumbnailUrl ?? undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+  },
+});
 
-    return newCampaignId;
+/**
+ * Fetch pending campaigns (ADMIN)
+ */
+export const getPendingCampaigns = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("economicCampaigns")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+  },
+});
+
+/**
+ * Approve campaign (ADMIN)
+ */
+export const approveCampaign = mutation({
+  args: { campaignId: v.id("economicCampaigns") },
+  handler: async (ctx, { campaignId }) => {
+    await ctx.db.patch(campaignId, {
+      status: "approved",
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+/**
+ * Reject campaign (ADMIN)
+ */
+export const rejectCampaign = mutation({
+  args: { campaignId: v.id("economicCampaigns") },
+  handler: async (ctx, { campaignId }) => {
+    await ctx.db.patch(campaignId, {
+      status: "rejected",
+      updatedAt: Date.now(),
+    });
+    return { success: true };
   },
 });
 
@@ -52,7 +99,7 @@ export const getCampaignById = query({
 });
 
 /**
- * Get all active (approved + funding) campaigns
+ * Active campaigns
  */
 export const getActiveCampaigns = query({
   args: {},
@@ -65,7 +112,7 @@ export const getActiveCampaigns = query({
 });
 
 /**
- * Update campaign status
+ * Generic update
  */
 export const updateCampaignStatus = mutation({
   args: {
