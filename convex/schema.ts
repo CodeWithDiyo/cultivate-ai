@@ -222,4 +222,12 @@ export default defineSchema({
     score: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_campaignId", ["campaignId"]),
+
+  
+flutterwaveWebhooks = defineTable({
+  paymentData: v.any(),
+  createdAt: v.number(),
+}).index("by_createdAt", ["createdAt"]),
+
 });
+

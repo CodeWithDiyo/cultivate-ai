@@ -6,7 +6,9 @@ import { v } from "convex/values";
  * Tracks campaign revenue, investor returns, and platform earnings.
  */
 
-// Add or update revenue entry
+/* ---------------------------------------------
+ * Create Revenue Entry
+ * -------------------------------------------*/
 export const recordRevenue = mutation({
   args: {
     investorId: v.id("userProfiles"),
@@ -33,7 +35,19 @@ export const recordRevenue = mutation({
   },
 });
 
-// Fetch total platform revenue (only platform_fee)
+/* ---------------------------------------------
+ * Admin: Fetch ALL Revenues
+ * -------------------------------------------*/
+export const getAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("revenues").order("desc").collect();
+  },
+});
+
+/* ---------------------------------------------
+ * Platform Revenue (platform_fee only)
+ * -------------------------------------------*/
 export const getPlatformRevenue = query({
   args: {},
   handler: async (ctx) => {
@@ -46,7 +60,9 @@ export const getPlatformRevenue = query({
   },
 });
 
-// Fetch campaign revenue
+/* ---------------------------------------------
+ * Campaign Revenue Breakdown
+ * -------------------------------------------*/
 export const getCampaignRevenue = query({
   args: { campaignId: v.id("economicCampaigns") },
   handler: async (ctx, { campaignId }) => {
@@ -56,11 +72,14 @@ export const getCampaignRevenue = query({
       .collect();
 
     const total = revenues.reduce((sum, r) => sum + r.amount, 0);
+
     return { total, breakdown: revenues };
   },
 });
 
-// Fetch revenue by investor/user
+/* ---------------------------------------------
+ * User/Investor Revenue
+ * -------------------------------------------*/
 export const getUserRevenue = query({
   args: { investorId: v.id("userProfiles") },
   handler: async (ctx, { investorId }) => {
@@ -78,7 +97,9 @@ export const getUserRevenue = query({
   },
 });
 
-// Update revenue status
+/* ---------------------------------------------
+ * Update Revenue Status
+ * -------------------------------------------*/
 export const updateRevenueStatus = mutation({
   args: {
     revenueId: v.id("revenues"),
@@ -93,7 +114,9 @@ export const updateRevenueStatus = mutation({
   },
 });
 
-// AI-assisted revenue projection (mock)
+/* ---------------------------------------------
+ * AI-Assisted Revenue Projection
+ * -------------------------------------------*/
 export const projectRevenueGrowth = mutation({
   args: {
     campaignId: v.id("economicCampaigns"),

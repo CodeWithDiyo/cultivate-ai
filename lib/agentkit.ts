@@ -2,34 +2,39 @@
 import OpenAI from "openai";
 
 /**
- * ✅ Initialize OpenAI client
+ * Create OpenAI client lazily (Convex-safe)
  */
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+export function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY!,
+  });
+}
 
 /**
- * AgentKit Task Names
+ * Task names allowed
  */
 export type AgentTaskName =
   | "recommend_campaigns"
   | "campaign_solution_plan"
   | "grant_innovator_matching"
-  | "evaluate_solution"
-  | string; // allow future custom tasks
+  | "evaluate_solution";
 
 /**
- * Context for tasks
+ * Flexible context type
  */
-export type AgentTaskContext = Record<string, any>;
+export type AgentTaskContext = Record<string, unknown>;
 
 /**
- * Standardized AI output type
+ * Output type
  */
-export type AgentTaskOutput = string | Record<string, any> | any[] | null;
+export type AgentTaskOutput =
+  | string
+  | Record<string, unknown>
+  | unknown[]
+  | null;
 
 /**
- * Input for runAgentTask
+ * Input structure
  */
 export interface RunAgentTaskInput {
   userId: string;
@@ -38,64 +43,35 @@ export interface RunAgentTaskInput {
 }
 
 /**
- * runAgentTask
- * ----------------
- * Executes an AgentKit/OpenAI AI task with type safety
+ * Generic AI task runner
  */
 export async function runAgentTask({
   userId,
   taskName,
-  context,
+  context = {},
 }: RunAgentTaskInput): Promise<AgentTaskOutput> {
   try {
-    // Build task-specific prompt
-    let prompt: string = "";
-    switch (taskName) {
-      case "recommend_campaigns":
-        prompt = `User ${userId}: Recommend top climate campaigns based on context: ${JSON.stringify(
-          context
-        )}`;
-        break;
+    const openai = getOpenAI(); // SAFE
 
-      case "campaign_solution_plan":
-        prompt = `User ${userId}: Generate step-by-step climate solution plan for campaign: ${JSON.stringify(
-          context
-        )}`;
-        break;
+    // Build dynamic prompt
+    const prompt = `Task: ${taskName}
+User: ${userId}
+Context: ${JSON.stringify(context)}
+Respond in JSON if possible.`;
 
-      case "grant_innovator_matching":
-        prompt = `User ${userId}: Recommend innovators for grants based on context: ${JSON.stringify(
-          context
-        )}`;
-        break;
-
-      case "evaluate_solution":
-        prompt = `User ${userId}: Evaluate innovator's solution: ${JSON.stringify(
-          context
-        )}`;
-        break;
-
-      default:
-        prompt = `User ${userId}: Provide AI output for task ${taskName} with context: ${JSON.stringify(
-          context
-        )}`;
-        break;
-    }
-
-    // Call OpenAI chat completion
-    const response = await client.chat.completions.create({
+    // Call OpenAI
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
     });
 
-    const text: string = response.choices?.[0]?.message?.content ?? "";
+    const output = response.choices?.[0]?.message?.content ?? "";
 
-    // Attempt to parse JSON output, fallback to string
     try {
-      return JSON.parse(text);
+      return JSON.parse(output);
     } catch {
-      return text || null;
+      return output.trim() || null;
     }
   } catch (err) {
     console.error("runAgentTask error:", err);

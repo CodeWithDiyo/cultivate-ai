@@ -2,11 +2,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { runAgentTask } from "../lib/agentkit";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+import { getOpenAI } from "../lib/agentkit";
 
 /* --------------------------------------------------
    1️⃣ Recommend campaigns
@@ -61,7 +57,7 @@ export const recommendInnovatorsForGrant = query({
 -------------------------------------------------- */
 export const evaluateSolution = query({
   args: {
-    solutionId: v.id("solutions"), 
+    solutionId: v.id("solutions"),
     userId: v.string(),
   },
   handler: async (_ctx, { solutionId, userId }) => {
@@ -79,7 +75,9 @@ export const evaluateSolution = query({
 export const generateAndCacheRecommendations = mutation({
   args: { campaignId: v.id("economicCampaigns") },
   handler: async (ctx, { campaignId }) => {
+    const openai = getOpenAI(); // SAFE
     const campaigns = await ctx.db.query("economicCampaigns").collect();
+
     if (!campaigns.length) return [];
 
     const prompt = `
