@@ -224,7 +224,7 @@ export default defineSchema({
   }).index("by_campaignId", ["campaignId"]),
 
   
-flutterwaveWebhooks = defineTable({
+flutterwaveWebhooks: defineTable({
   paymentData: v.any(),
   createdAt: v.number(),
 }).index("by_createdAt", ["createdAt"]),
