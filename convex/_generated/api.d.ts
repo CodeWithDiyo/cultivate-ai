@@ -15,6 +15,7 @@ import type * as notifications from "../notifications.js";
 import type * as payments from "../payments.js";
 import type * as payouts from "../payouts.js";
 import type * as revenues from "../revenues.js";
+import type * as server from "../server.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 import type * as webhooks from "../webhooks.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   payments: typeof payments;
   payouts: typeof payouts;
   revenues: typeof revenues;
+  server: typeof server;
   transactions: typeof transactions;
   users: typeof users;
   webhooks: typeof webhooks;

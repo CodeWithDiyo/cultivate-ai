@@ -15,14 +15,18 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export default function NotificationBell() {
   const { user } = useUser();
-  const userId = user?.id || "";
+
+  // ✅ Convert Clerk user ID to Convex Id<"userProfiles">
+  const userId = (user?.id as unknown) as Id<"userProfiles">;
+
   const [open, setOpen] = useState(false);
 
-  const notifications = useQuery(api.notifications.getUserNotifications, { userId });
-  const unreadCount = useQuery(api.notifications.getUnreadCount, { userId });
+  const notifications = useQuery(api.notifications.getUserNotifications, { userId }) ?? [];
+  const unreadCount = useQuery(api.notifications.getUnreadCount, { userId }) ?? 0;
   const markAsRead = useMutation(api.notifications.markAllAsRead);
 
   const handleOpen = async () => {
@@ -55,7 +59,7 @@ export default function NotificationBell() {
           Notifications
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {notifications?.length ? (
+        {notifications.length ? (
           notifications.map((n) => (
             <DropdownMenuItem
               key={n._id}

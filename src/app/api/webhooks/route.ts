@@ -1,18 +1,17 @@
 // FILE: /app/api/webhooks/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/convex/_generated/server"; // import db for direct access
+import { getConvexServer } from "@/convex/server";
+import { api } from "@/convex/_generated/api";
 
 export async function POST(req: NextRequest) {
   try {
     const data: Record<string, unknown> = await req.json();
+    const convex = getConvexServer();
 
-    // Handle the payment data directly in the route
-    await db.insert("flutterwaveWebhooks", {
+    // Call the Convex mutation that writes to flutterwaveWebhooks
+    await convex.mutation(api.webhooks.handleFlutterwaveWebhook, {
       paymentData: data,
-      createdAt: Date.now(),
     });
-
-    // You can run additional logic here, e.g., update orders, mark revenue, etc.
 
     return NextResponse.json({ status: "ok" });
   } catch (err: unknown) {

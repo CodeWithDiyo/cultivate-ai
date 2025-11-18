@@ -10,49 +10,97 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import type { Id } from "@/convex/_generated/dataModel";
+
+/* ------------------------------------------------------
+   Notification Interface — matches Convex backend
+------------------------------------------------------ */
+interface Notification {
+  _id: Id<"notifications">;
+  _creationTime?: number;
+  type:
+    | "system"
+    | "alert"
+    | "info"
+    | "commission"
+    | "sale"
+    | "ai_recommendation";
+  message: string;
+  read: boolean;
+  createdAt: number;
+  userId: Id<"userProfiles">;
+  meta?: Record<string, unknown>;
+}
 
 export default function NotificationCenter() {
   const { user } = useUser();
-  const userId = user?.id || "";
+
+  // Convert Clerk string ID → Convex typed ID (safe cast)
+  const userId = (user?.id as unknown as Id<"userProfiles">) ?? undefined;
 
   const [tab, setTab] = useState("all");
+  const [aiNotifications, setAiNotifications] = useState<Notification[]>([]);
 
-  // Real-time data from Convex
-  const notifications = useQuery(api.notifications.getUserNotifications, { userId });
+  // Typed query result
+  const notifications = useQuery(
+  api.notifications.getUserNotifications,
+  userId ? { userId } : "skip"
+  ) as Notification[] | undefined;
+
+
+  // Mutation function (typed response shape)
   const prioritize = useMutation(api.notifications.prioritizeNotifications);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
 
-  const [aiNotifications, setAiNotifications] = useState<any[]>([]);
+  /* Local type for the prioritize() response to avoid implicit `any` */
+  type PrioritizeResult = { message?: string; prioritized?: Notification[] } | null | undefined;
 
   useEffect(() => {
-    if (userId) {
-      (async () => {
-        const result = await prioritize({ userId });
-        setAiNotifications(result?.prioritized || []);
-      })();
-    }
-  }, [userId, notifications]);
+    if (!userId) return;
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        // call prioritize and narrow result to the expected shape
+        const raw = (await prioritize({ userId })) as PrioritizeResult;
+        const prioritized = Array.isArray(raw?.prioritized) ? raw!.prioritized! : [];
+        if (isMounted) setAiNotifications(prioritized);
+      } catch (err) {
+        console.error("Failed to prioritize notifications:", err);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, notifications, prioritize]);
 
   const handleMarkAllRead = async () => {
+    if (!userId) return;
     await markAllAsRead({ userId });
   };
 
-  const renderIcon = (type: string) => {
+  const renderIcon = (type: Notification["type"]) => {
     switch (type) {
       case "alert":
         return <AlertCircle className="h-5 w-5 text-red-500" />;
       case "system":
         return <Info className="h-5 w-5 text-blue-500" />;
-      case "campaign":
-        return <Bell className="h-5 w-5 text-green-500" />;
-      case "reward":
-        return <CheckCircle className="h-5 w-5 text-yellow-500" />;
+      case "info":
+        return <Info className="h-5 w-5 text-gray-500" />;
+      case "commission":
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "sale":
+        return <CheckCircle className="h-5 w-5 text-purple-500" />;
+      case "ai_recommendation":
+        return <Bell className="h-5 w-5 text-yellow-500" />;
       default:
         return <Info className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const renderList = (data: any[]) => {
+  const renderList = (data: Notification[]) => {
     if (!data?.length)
       return (
         <p className="text-gray-500 text-sm text-center py-8">
@@ -70,6 +118,7 @@ export default function NotificationCenter() {
         }`}
       >
         <div className="mt-1">{renderIcon(n.type)}</div>
+
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-800">{n.message}</p>
           <p className="text-xs text-gray-500 mt-1">
@@ -87,13 +136,14 @@ export default function NotificationCenter() {
           <CardTitle className="text-lg font-bold text-gray-800">
             Notification Center
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
-              Mark all as read
-            </Button>
-          </div>
+
+          <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+            Mark all as read
+          </Button>
         </CardHeader>
+
         <Separator />
+
         <CardContent>
           <Tabs defaultValue="all" value={tab} onValueChange={setTab}>
             <TabsList className="grid grid-cols-3 w-full mb-4">
@@ -102,11 +152,17 @@ export default function NotificationCenter() {
               <TabsTrigger value="ai">AI Priority</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all">{renderList(notifications || [])}</TabsContent>
-            <TabsContent value="unread">
-              {renderList((notifications || []).filter((n) => !n.read))}
+            <TabsContent value="all">
+              {renderList((notifications || []) as Notification[])}
             </TabsContent>
-            <TabsContent value="ai">{renderList(aiNotifications)}</TabsContent>
+
+            <TabsContent value="unread">
+              {renderList(((notifications || []) as Notification[]).filter((n) => !n.read))}
+            </TabsContent>
+
+            <TabsContent value="ai">
+              {renderList(aiNotifications)}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>

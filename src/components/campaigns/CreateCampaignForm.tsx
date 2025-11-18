@@ -1,4 +1,3 @@
-// FILE: /components/campaigns/CreateCampaignForm.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -7,48 +6,61 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
+import type { Id } from "@/convex/_generated/dataModel"; // import Id type
 
 interface Props {
-  ownerId: string;
+  userId: string; // Clerk user ID (string)
 }
 
-export default function CreateCampaignForm({ ownerId }: Props) {
+export default function CreateCampaignForm({ userId }: Props) {
   const router = useRouter();
   const createCampaign = useMutation(api.campaigns.createCampaign);
+
+  // Cast Clerk string ID to Convex ID type
+  const convexUserId = userId as unknown as Id<"userProfiles">;
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [sector, setSector] = useState("");
-  const [type, setType] = useState<"grant" | "loan" | "empowerment" | "fixed_asset">("grant");
-  const [amount, setAmount] = useState<number | "">("");
+  const [location, setLocation] = useState("");
+  const [fundingGoal, setFundingGoal] = useState<number | "">("");
+  const [minInvestment, setMinInvestment] = useState<number | "">("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ownerId) return alert("You must be signed in to create a campaign.");
-    if (!title.trim() || !description.trim() || !sector.trim() || !amount) return alert("Please fill all fields.");
+    if (!convexUserId) return alert("You must be signed in to create a campaign.");
+    if (!title.trim() || !description.trim() || !sector.trim() || !fundingGoal || !minInvestment) {
+      return alert("Please fill all required fields.");
+    }
 
     setLoading(true);
     try {
       await createCampaign({
-        ownerId,
+        userId: convexUserId,
         title,
         description,
         sector,
-        type,
-        amount: Number(amount),
-        country: undefined,
+        location: location || undefined,
+        fundingGoal: Number(fundingGoal),
+        minInvestment: Number(minInvestment),
+        thumbnailUrl: thumbnailUrl || undefined,
       });
+
       // Clear form
       setTitle("");
       setDescription("");
       setSector("");
-      setAmount("");
-      // redirect to manage page or refresh
+      setLocation("");
+      setFundingGoal("");
+      setMinInvestment("");
+      setThumbnailUrl("");
+
       router.refresh();
       alert("Campaign created successfully.");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
       alert("Failed to create campaign.");
     } finally {
@@ -61,28 +73,22 @@ export default function CreateCampaignForm({ ownerId }: Props) {
       <Input placeholder="Campaign title" value={title} onChange={(e) => setTitle(e.target.value)} required />
       <Textarea placeholder="Short description" value={description} onChange={(e) => setDescription(e.target.value)} required />
       <Input placeholder="Sector (e.g., Agriculture, Energy)" value={sector} onChange={(e) => setSector(e.target.value)} required />
-
-      <div className="flex gap-2">
-        <Select value={type} onValueChange={(v) => setType(v as any)}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="grant">Grant</SelectItem>
-            <SelectItem value="loan">Loan</SelectItem>
-            <SelectItem value="empowerment">Empowerment</SelectItem>
-            <SelectItem value="fixed_asset">Fixed Asset</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Input
-          type="number"
-          placeholder="Amount (e.g., 10000)"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
-          required
-        />
-      </div>
+      <Input placeholder="Location (optional)" value={location} onChange={(e) => setLocation(e.target.value)} />
+      <Input
+        type="number"
+        placeholder="Funding Goal (e.g., 10000)"
+        value={fundingGoal}
+        onChange={(e) => setFundingGoal(e.target.value === "" ? "" : Number(e.target.value))}
+        required
+      />
+      <Input
+        type="number"
+        placeholder="Minimum Investment (e.g., 100)"
+        value={minInvestment}
+        onChange={(e) => setMinInvestment(e.target.value === "" ? "" : Number(e.target.value))}
+        required
+      />
+      <Input placeholder="Thumbnail URL (optional)" value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)} />
 
       <div className="flex justify-end">
         <Button type="submit" disabled={loading}>
