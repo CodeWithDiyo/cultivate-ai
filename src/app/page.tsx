@@ -65,7 +65,8 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-8 text-center text-gray-500 border-t bg-gray-50">
         <p className="text-sm">
-          © {new Date().getFullYear()} Cultivate AI — Empowering Sustainable Futures
+          © {new Date().getFullYear()} Cultivate AI — Empowering Sustainable Futures 
+          POWERED BY: THE DIYOWSKAN SENSE 
         </p>
       </footer>
     </div>

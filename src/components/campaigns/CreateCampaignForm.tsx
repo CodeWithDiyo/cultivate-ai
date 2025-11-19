@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useConvexMutation } from "@/hooks/useConvexMutation";
 
 interface Props {
   userId: string;
@@ -16,10 +16,10 @@ interface Props {
 export default function CreateCampaignForm({ userId }: Props) {
   const router = useRouter();
 
-  // Correct: useMutation takes only the return type, not arguments
-  const createCampaign = useMutation(api.campaigns.createCampaign);
+  // This should now work without errors
+  const createCampaign = useConvexMutation(api.campaigns.createCampaign);
 
-  const convexUserId = userId as unknown as Id<"userProfiles">;
+  const convexUserId = userId as Id<"userProfiles">;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
